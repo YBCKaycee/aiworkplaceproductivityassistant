@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Workplace Productivity Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12141c;
+    --ink-2:#1d212c;
+    --ink-3:#2a2f3c;
+    --paper:#f4f5f7;
+    --card:#ffffff;
+    --line:#e1e4ea;
+    --line-soft:#edeff3;
+    --text:#171a22;
+    --text-soft:#5b6172;
+    --text-faint:#8a90a1;
+    --accent:#0f7a6b;
+    --accent-ink:#0b5c51;
+    --accent-soft:#e3f3f0;
+    --amber:#a06a17;
+    --amber-soft:#fbf0dd;
+    --red:#b3403a;
+    --red-soft:#fbeae9;
+    --radius-sm:6px;
+    --radius-md:10px;
+    --font-head:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --shadow-soft: 0 8px 24px rgba(18,20,28,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-body);
+    background:var(--paper);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:var(--font-head); margin:0; letter-spacing:-0.01em;}
+  p{margin:0;}
+  button{font-family:inherit; cursor:pointer;}
+  ::selection{background:var(--accent-soft); color:var(--accent-ink);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  /* ---------- Layout ---------- */
+  .app{display:flex; min-height:100vh;}
+
+  .sidebar{
+    width:252px; flex-shrink:0; background:var(--ink); color:#cfd3dd;
+    display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0;
+    transition:transform .25s ease; z-index:40;
+  }
+  .sidebar-brand{
+    display:flex; align-items:center; gap:10px; padding:22px 20px 18px 22px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .brand-mark{
+    width:30px; height:30px; border-radius:8px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .brand-mark svg{width:17px; height:17px;}
+  .brand-text{line-height:1.15;}
+  .brand-text .name{font-family:var(--font-head); font-weight:600; font-size:14.5px; color:#fff;}
+  .brand-text .sub{font-size:11px; color:#868c9c; margin-top:2px;}
+
+  .nav{list-style:none; margin:0; padding:14px 12px; flex:1; overflow-y:auto;}
+  .nav-label{font-size:10.5px; text-transform:none; color:#666c7c; padding:8px 10px 6px; letter-spacing:.02em;}
+  .nav-item{margin-bottom:2px;}
+  .nav-link{
+    display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px;
+    color:#c4c8d4; text-decoration:none; font-size:13.5px; font-weight:500;
+    border-left:3px solid transparent; background:transparent; width:100%; text-align:left;
+    transition:background .15s ease, color .15s ease;
+  }
+  .nav-link svg{width:17px; height:17px; flex-shrink:0; opacity:.85;}
+  .nav-link:hover{background:rgba(255,255,255,0.06); color:#fff;}
+  .nav-link.active{background:var(--ink-3); color:#fff; border-left-color:var(--accent);}
+
+  .sidebar-foot{
+    padding:14px 20px 18px; border-top:1px solid rgba(255,255,255,0.08);
+    font-size:11px; color:#767c8c; line-height:1.5;
+  }
+  .sidebar-foot strong{color:#a9aebb; font-weight:600;}
+
+  .sidebar-close, .sidebar-toggle{display:none;}
+
+  .main{flex:1; margin-left:252px; display:flex; flex-direction:column; min-width:0;}
+
+  .topbar{
+    position:sticky; top:0; z-index:20; background:rgba(244,245,247,0.92); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+    padding:16px 32px; display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .topbar-title h1{font-size:19px; font-weight:600;}
+  .topbar-title p{font-size:12.5px; color:var(--text-soft); margin-top:3px;}
+  .topbar-right{display:flex; align-items:center; gap:14px;}
+  .user-chip{
+    display:flex; align-items:center; gap:9px; padding:6px 12px 6px 6px; border-radius:24px;
+    background:var(--card); border:1px solid var(--line);
+  }
+  .user-avatar{
+    width:26px; height:26px; border-radius:50%; background:var(--accent-soft); color:var(--accent-ink);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; font-family:var(--font-head);
+  }
+  .user-chip span{font-size:12.5px; font-weight:600; color:var(--text);}
+
+  .view-container{padding:28px 32px 60px; max-width:1180px; width:100%; margin:0 auto;}
+  .view{display:none; animation:fadein .28s ease;}
+  .view.active{display:block;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- Common bits ---------- */
+  .disclaimer{
+    display:flex; align-items:flex-start; gap:8px; font-size:11.5px; color:var(--amber);
+    background:var(--amber-soft); border:1px solid #efd9ac; padding:8px 11px; border-radius:var(--radius-sm);
+    line-height:1.45;
+  }
+  .disclaimer svg{width:14px; height:14px; flex-shrink:0; margin-top:1px;}
+
+  .section-head{margin-bottom:20px;}
+  .section-head h2{font-size:21px; font-weight:600;}
+  .section-head p{font-size:13.5px; color:var(--text-soft); margin-top:4px; max-width:62ch;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-md);}
+  .panel{padding:22px;}
+  .panel-title{
+    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text);
+    margin-bottom:16px; text-transform:none;
+  }
+  .panel-title .dot{width:6px; height:6px; border-radius:50%; background:var(--accent);}
+
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--text-soft); margin-bottom:6px;}
+  .field{margin-bottom:16px;}
+  input[type="text"], textarea, select{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-family:inherit; font-size:13.5px; color:var(--text); background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus{
+    border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); outline:none;
+  }
+  textarea{resize:vertical; min-height:100px; line-height:1.5;}
+  select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%235b6172'/></svg>"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:none; border-radius:8px; padding:10px 18px; font-size:13.5px; font-weight:600;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .btn-primary{background:var(--accent); color:#fff; width:100%;}
+  .btn-primary:hover{background:var(--accent-ink);}
+  .btn-primary:disabled{background:#a9c9c3; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--text-soft); border:1px solid var(--line); padding:7px 12px; font-size:12.5px;}
+  .btn-ghost:hover{border-color:var(--accent); color:var(--accent-ink);}
+
+  .output-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px;}
+  .output-box{
+    min-height:180px; border:1px dashed var(--line); border-radius:8px; padding:16px 18px;
+    font-size:13.5px; line-height:1.7; color:var(--text);
+  }
+  .output-box.filled{border-style:solid; background:#fcfcfd;}
+  .output-empty{color:var(--text-faint); font-size:13px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding-top:6px;}
+  .output-content h4{font-size:13.5px; font-weight:700; margin:14px 0 6px; color:var(--accent-ink);}
+  .output-content h4:first-child{margin-top:0;}
+  .output-content ul{margin:4px 0 10px; padding-left:20px;}
+  .output-content li{margin-bottom:5px;}
+  .output-content p{margin-bottom:10px;}
+  .output-content strong{color:var(--text);}
+
+  .spinner{
+    width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,0.4);
+    border-top-color:#fff; animation:spin .7s linear infinite; display:inline-block;
+  }
+  .spinner.dark{border:2px solid var(--line); border-top-color:var(--accent);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .error-box{
+    background:var(--red-soft); border:1px solid #f0c6c3; color:var(--red);
+    padding:10px 13px; border-radius:8px; font-size:12.5px; margin-top:10px;
+  }
+
+  /* ---------- Dashboard ---------- */
+  .stat-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:28px;}
+  .stat-card{padding:18px 18px 16px;}
+  .stat-card .label{font-size:12px; color:var(--text-soft); font-weight:600;}
+  .stat-card .value{font-family:var(--font-head); font-size:26px; font-weight:600; margin-top:8px;}
+  .stat-card .trend{font-size:11.5px; margin-top:6px; color:var(--accent-ink); font-weight:600;}
+
+  .quick-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:28px;}
+  .quick-card{
+    padding:18px; text-align:left; background:var(--card); display:flex; flex-direction:column; gap:10px;
+    align-items:flex-start; border:1px solid var(--line); border-radius:var(--radius-md); width:100%;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .quick-card:hover{border-color:var(--accent); transform:translateY(-2px);}
+  .quick-icon{
+    width:34px; height:34px; border-radius:8px; background:var(--accent-soft); color:var(--accent-ink);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .quick-icon svg{width:17px; height:17px;}
+  .quick-card h3{font-size:14px; font-weight:600;}
+  .quick-card p{font-size:12px; color:var(--text-soft); line-height:1.5;}
+
+  .activity-list{list-style:none; margin:0; padding:0;}
+  .activity-list li{
+    display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-soft);
+    font-size:13px;
+  }
+  .activity-list li:last-child{border-bottom:none;}
+  .activity-dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0;}
+  .activity-list .when{margin-left:auto; color:var(--text-faint); font-size:11.5px;}
+
+  /* ---------- Two column feature layout ---------- */
+  .feature-grid{display:grid; grid-template-columns:380px 1fr; gap:18px; align-items:start;}
+
+  /* ---------- Task planner table ---------- */
+  .plan-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .plan-table th{
+    text-align:left; font-size:11px; text-transform:none; color:var(--text-soft); font-weight:600;
+    padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  .plan-table td{padding:10px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+  .badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700;}
+  .badge-high{background:var(--red-soft); color:var(--red);}
+  .badge-medium{background:var(--amber-soft); color:var(--amber);}
+  .badge-low{background:var(--accent-soft); color:var(--accent-ink);}
+
+  /* ---------- Chat ---------- */
+  .chat-wrap{display:flex; flex-direction:column; height:560px;}
+  .chat-messages{flex:1; overflow-y:auto; padding:6px 4px 12px; display:flex; flex-direction:column; gap:12px;}
+  .msg{max-width:76%; padding:10px 14px; border-radius:12px; font-size:13.5px; line-height:1.55;}
+  .msg.user{align-self:flex-end; background:var(--ink); color:#fff; border-bottom-right-radius:3px;}
+  .msg.bot{align-self:flex-start; background:var(--paper); border:1px solid var(--line); border-bottom-left-radius:3px;}
+  .msg.bot .output-content h4{font-size:13px;}
+  .chat-input-row{display:flex; gap:10px; border-top:1px solid var(--line); padding-top:14px; margin-top:10px;}
+  .chat-input-row textarea{min-height:44px; max-height:120px;}
+  .chat-send{width:auto; padding:10px 20px; flex-shrink:0;}
+  .chat-empty{color:var(--text-faint); font-size:13px; text-align:center; margin:auto;}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .quick-grid{grid-template-columns:repeat(2,1fr);}
+    .feature-grid{grid-template-columns:1fr;}
+    .row-2{grid-template-columns:1fr;}
+  }
+  @media (max-width:760px){
+    .sidebar{transform:translateX(-100%); box-shadow:0 0 0 100vmax rgba(0,0,0,0); }
+    .sidebar.open{transform:translateX(0); box-shadow:0 0 0 100vmax rgba(0,0,0,0.35);}
+    .main{margin-left:0;}
+    .sidebar-toggle{
+      display:flex; align-items:center; justify-content:center; width:36px; height:36px;
+      border:1px solid var(--line); border-radius:8px; background:var(--card);
+    }
+    .sidebar-toggle svg{width:18px; height:18px;}
+    .topbar{padding:14px 18px;}
+    .view-container{padding:20px 18px 50px;}
+    .stat-grid, .quick-grid{grid-template-columns:1fr;}
+    .user-chip span{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 5.2L19.5 10l-4.8 2.3L12 17l-2.2-4.7L4.5 10l5.3-1.8L12 3z" fill="white"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="name">Workplace AI</div>
+        <div class="sub">Productivity Assistant</div>
+      </div>
+    </div>
+
+    <ul class="nav" id="navList">
+      <li class="nav-label">Overview</li>
+      <li class="nav-item"><button class="nav-link active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </button></li>
+
+      <li class="nav-label" style="margin-top:10px;">AI Tools</li>
+      <li class="nav-item"><button class="nav-link" data-view="email">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        Email Generator
+      </button></li>
+      <li class="nav-item"><button class="nav-link" data-view="notes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8l3 3v15H5V3h3z"/><path d="M9 10h6M9 14h6M9 18h3"/></svg>
+        Meeting Notes
+      </button></li>
+      <li class="nav-item"><button class="nav-link" data-view="planner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M7.5 13.5l2 2 3-3.5"/></svg>
+        Task Planner
+      </button></li>
+      <li class="nav-item"><button class="nav-link" data-view="research">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5-5"/></svg>
+        Research Assistant
+      </button></li>
+      <li class="nav-item"><button class="nav-link" data-view="chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+        AI Chat
+      </button></li>
+    </ul>
+
+    <div class="sidebar-foot">
+      <strong>Prototype build.</strong><br/>
+      AI-generated content may require human review before use.
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <div class="topbar-title">
+          <h1 id="topbarTitle">Dashboard</h1>
+          <p id="topbarSub">A quick look at your AI-assisted workday</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="user-avatar">JM</div>
+          <span>Jordan Miles</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="view-container">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section class="view active" id="view-dashboard">
+        <div class="stat-grid">
+          <div class="card stat-card">
+            <div class="label">Emails drafted</div>
+            <div class="value">18</div>
+            <div class="trend">+4 this week</div>
+          </div>
+          <div class="card stat-card">
+            <div class="label">Meetings summarized</div>
+            <div class="value">7</div>
+            <div class="trend">+2 this week</div>
+          </div>
+          <div class="card stat-card">
+            <div class="label">Tasks planned</div>
+            <div class="value">32</div>
+            <div class="trend">9 due today</div>
+          </div>
+          <div class="card stat-card">
+            <div class="label">Research queries</div>
+            <div class="value">11</div>
+            <div class="trend">+3 this week</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Quick actions</h2>
+          <p>Jump straight into a tool. Each one uses a structured prompt behind the scenes to keep AI output consistent and professional.</p>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-card" data-view="email">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+            <h3>Draft an email</h3>
+            <p>Generate a tone- and audience-matched email in seconds.</p>
+          </button>
+          <button class="quick-card" data-view="notes">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8l3 3v15H5V3h3z"/><path d="M9 10h6M9 14h6M9 18h3"/></svg></div>
+            <h3>Summarize a meeting</h3>
+            <p>Turn raw notes into key points, actions and deadlines.</p>
+          </button>
+          <button class="quick-card" data-view="planner">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M7.5 13.5l2 2 3-3.5"/></svg></div>
+            <h3>Plan today's tasks</h3>
+            <p>Prioritize and schedule your task list automatically.</p>
+          </button>
+          <button class="quick-card" data-view="research">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5-5"/></svg></div>
+            <h3>Research a topic</h3>
+            <p>Get a structured overview with insights and next steps.</p>
+          </button>
+          <button class="quick-card" data-view="chat">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4V5z"/></svg></div>
+            <h3>Ask the assistant</h3>
+            <p>Open-ended help with anything work related.</p>
+          </button>
+          <div class="quick-card" style="cursor:default;">
+            <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg></div>
+            <h3>Human review, always</h3>
+            <p>Every AI output is a draft. Review before you send or act on it.</p>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Recent activity</h2>
+        </div>
+        <div class="card panel">
+          <ul class="activity-list">
+            <li><span class="activity-dot"></span> Generated a follow-up email to a vendor · Formal tone <span class="when">2h ago</span></li>
+            <li><span class="activity-dot"></span> Summarized Q3 planning sync — 4 action items extracted <span class="when">Yesterday</span></li>
+            <li><span class="activity-dot"></span> Prioritized 9 tasks for this week's sprint <span class="when">Yesterday</span></li>
+            <li><span class="activity-dot"></span> Researched "competitor pricing models" <span class="when">2 days ago</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ===================== EMAIL GENERATOR ===================== -->
+      <section class="view" id="view-email">
+        <div class="section-head">
+          <h2>Smart Email Generator</h2>
+          <p>Describe who you're writing to and what you need to say — the assistant matches tone, audience and length automatically.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="card panel">
+            <div class="panel-title"><span class="dot"></span>Email details</div>
+            <div class="field">
+              <label for="em-audience">Audience</label>
+              <select id="em-audience">
+                <option>Client</option>
+                <option>Manager</option>
+                <option>Team member</option>
+                <option>Executive / leadership</option>
+                <option>Vendor / supplier</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="em-context">Recipient name / context</label>
+              <input type="text" id="em-context" placeholder="e.g. Sarah, Head of Procurement at Delta Corp" />
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label for="em-tone">Tone</label>
+                <select id="em-tone">
+                  <option>Formal</option>
+                  <option>Friendly</option>
+                  <option>Persuasive</option>
+                  <option>Apologetic</option>
+                  <option>Assertive</option>
+                  <option>Concise</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="em-length">Length</label>
+                <select id="em-length">
+                  <option>Short</option>
+                  <option>Medium</option>
+                  <option>Detailed</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="em-points">Purpose / key points</label>
+              <textarea id="em-points" placeholder="e.g. Follow up on the invoice sent last week, ask for confirmation of payment date, keep it polite but firm."></textarea>
+            </div>
+            <button class="btn btn-primary" id="em-generate">
+              <span class="btn-label">Generate Email</span>
+            </button>
+          </div>
+
+          <div class="card panel">
+            <div class="output-head">
+              <div class="panel-title" style="margin-bottom:0;"><span class="dot"></span>AI output</div>
+              <button class="btn-ghost" id="em-copy" style="display:none;">Copy</button>
+            </div>
+            <div class="disclaimer" style="margin-bottom:14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              AI-generated content may require human review.
+            </div>
+            <div class="output-box" id="em-output">
+              <div class="output-empty">
+                Fill in the details on the left and generate an email to see it here.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== MEETING NOTES ===================== -->
+      <section class="view" id="view-notes">
+        <div class="section-head">
+          <h2>Meeting Notes Summarizer</h2>
+          <p>Paste raw notes or a transcript. The assistant extracts key discussion points, decisions, action items and deadlines.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="card panel">
+            <div class="panel-title"><span class="dot"></span>Raw notes</div>
+            <div class="field">
+              <label for="nt-input">Meeting notes / transcript</label>
+              <textarea id="nt-input" style="min-height:260px;" placeholder="Paste your raw meeting notes here..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="nt-generate">
+              <span class="btn-label">Summarize Notes</span>
+            </button>
+          </div>
+
+          <div class="card panel">
+            <div class="output-head">
+              <div class="panel-title" style="margin-bottom:0;"><span class="dot"></span>Structured summary</div>
+              <button class="btn-ghost" id="nt-copy" style="display:none;">Copy</button>
+            </div>
+            <div class="disclaimer" style="margin-bottom:14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              AI-generated content may require human review.
+            </div>
+            <div class="output-box" id="nt-output">
+              <div class="output-empty">Paste your notes and summarize to see key points, actions and deadlines here.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TASK PLANNER ===================== -->
+      <section class="view" id="view-planner">
+        <div class="section-head">
+          <h2>AI Task Planner</h2>
+          <p>List your tasks and the assistant will prioritize and schedule them across your working hours.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="card panel">
+            <div class="panel-title"><span class="dot"></span>Your tasks</div>
+            <div class="field">
+              <label for="pl-tasks">Tasks (one per line)</label>
+              <textarea id="pl-tasks" style="min-height:180px;" placeholder="e.g.&#10;Finish client proposal&#10;Reply to finance about budget&#10;Prep slides for Friday review&#10;Book travel for conference"></textarea>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label for="pl-horizon">Planning horizon</label>
+                <select id="pl-horizon">
+                  <option>Today</option>
+                  <option>This week</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="pl-hours">Working hours</label>
+                <select id="pl-hours">
+                  <option>9:00 - 17:00</option>
+                  <option>8:00 - 16:00</option>
+                  <option>10:00 - 18:00</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="pl-generate">
+              <span class="btn-label">Generate Plan</span>
+            </button>
+          </div>
+
+          <div class="card panel">
+            <div class="output-head">
+              <div class="panel-title" style="margin-bottom:0;"><span class="dot"></span>Prioritized schedule</div>
+            </div>
+            <div class="disclaimer" style="margin-bottom:14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              AI-generated content may require human review.
+            </div>
+            <div class="output-box" id="pl-output">
+              <div class="output-empty">Add your tasks and generate a plan to see a prioritized schedule here.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== RESEARCH ASSISTANT ===================== -->
+      <section class="view" id="view-research">
+        <div class="section-head">
+          <h2>AI Research Assistant</h2>
+          <p>Ask about a topic, market, or question and get a structured overview with insights and suggested next steps.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="card panel">
+            <div class="panel-title"><span class="dot"></span>Research query</div>
+            <div class="field">
+              <label for="rs-topic">Topic or question</label>
+              <textarea id="rs-topic" style="min-height:110px;" placeholder="e.g. Key trends in enterprise SaaS pricing in 2026"></textarea>
+            </div>
+            <div class="field">
+              <label for="rs-depth">Depth</label>
+              <select id="rs-depth">
+                <option>Quick overview</option>
+                <option>Detailed analysis</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="rs-generate">
+              <span class="btn-label">Research Topic</span>
+            </button>
+          </div>
+
+          <div class="card panel">
+            <div class="output-head">
+              <div class="panel-title" style="margin-bottom:0;"><span class="dot"></span>Findings</div>
+              <button class="btn-ghost" id="rs-copy" style="display:none;">Copy</button>
+            </div>
+            <div class="disclaimer" style="margin-bottom:14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              Based on the assistant's general knowledge — verify time-sensitive facts against current sources.
+            </div>
+            <div class="output-box" id="rs-output">
+              <div class="output-empty">Enter a topic and research it to see a structured summary here.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CHAT ===================== -->
+      <section class="view" id="view-chat">
+        <div class="section-head">
+          <h2>AI Chatbot</h2>
+          <p>Ask anything work related — drafting help, quick questions, brainstorming, or planning support.</p>
+        </div>
+        <div class="card panel">
+          <div class="disclaimer" style="margin-bottom:14px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            AI-generated content may require human review.
+          </div>
+          <div class="chat-wrap">
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-empty">Start a conversation — ask about scheduling, drafting, planning or anything work related.</div>
+            </div>
+            <div class="chat-input-row">
+              <textarea id="chatInput" placeholder="Type a message..."></textarea>
+              <button class="btn btn-primary chat-send" id="chatSend">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const API_URL = "https://api.anthropic.com/v1/messages";
+  const MODEL = "claude-sonnet-4-6";
+
+  const TITLES = {
+    dashboard: ["Dashboard", "A quick look at your AI-assisted workday"],
+    email: ["Smart Email Generator", "Tone- and audience-matched email drafting"],
+    notes: ["Meeting Notes Summarizer", "Key points, decisions, actions and deadlines"],
+    planner: ["AI Task Planner", "Prioritization and scheduling for your task list"],
+    research: ["AI Research Assistant", "Structured insights and summaries on any topic"],
+    chat: ["AI Chat", "Open-ended help for everyday work"]
+  };
+
+  // ---------- Navigation ----------
+  function showView(view){
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    const target = document.getElementById("view-" + view);
+    if(target) target.classList.add("active");
+    document.querySelectorAll(".nav-link").forEach(l => l.classList.toggle("active", l.dataset.view === view));
+    const meta = TITLES[view] || ["", ""];
+    document.getElementById("topbarTitle").textContent = meta[0];
+    document.getElementById("topbarSub").textContent = meta[1];
+    document.getElementById("sidebar").classList.remove("open");
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+  document.querySelectorAll("[data-view]").forEach(el => {
+    el.addEventListener("click", () => showView(el.dataset.view));
+  });
+  document.getElementById("sidebarToggle").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("open");
+  });
+
+  // ---------- API helper ----------
+  async function callClaude(system, userText, maxTokens){
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: maxTokens || 1000,
+        system: system,
+        messages: [{ role: "user", content: userText }]
+      })
+    });
+    if(!res.ok){
+      throw new Error("The AI request failed (status " + res.status + "). Please try again.");
+    }
+    const data = await res.json();
+    return (data.content || [])
+      .filter(b => b.type === "text")
+      .map(b => b.text)
+      .join("\n")
+      .trim();
+  }
+
+  // ---------- Lightweight formatter: turns simple markdown-ish text into HTML ----------
+  function formatOutput(raw){
+    const lines = raw.split(/\r?\n/);
+    let html = "";
+    let inList = false;
+    const closeList = () => { if(inList){ html += "</ul>"; inList = false; } };
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if(trimmed === ""){ return; }
+
+      // headers like "### Title" or "**Title:**" on its own line
+      const headerMatch = trimmed.match(/^#{1,4}\s*(.+)$/);
+      const boldHeaderMatch = trimmed.match(/^\*\*(.+?)\*\*:?$/);
+      if(headerMatch){
+        closeList();
+        html += "<h4>" + escapeHtml(headerMatch[1]) + "</h4>";
+        return;
+      }
+      if(boldHeaderMatch && trimmed.length < 60){
+        closeList();
+        html += "<h4>" + escapeHtml(boldHeaderMatch[1]) + "</h4>";
+        return;
+      }
+
+      // bullet list items
+      const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+      if(bulletMatch){
+        if(!inList){ html += "<ul>"; inList = true; }
+        html += "<li>" + inlineFormat(bulletMatch[1]) + "</li>";
+        return;
+      }
+
+      closeList();
+      html += "<p>" + inlineFormat(trimmed) + "</p>";
+    });
+    closeList();
+    return html;
+  }
+
+  function inlineFormat(text){
+    let t = escapeHtml(text);
+    t = t.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    return t;
+  }
+
+  function escapeHtml(str){
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // ---------- Generic wiring for a "form -> output box" feature ----------
+  function wireFeature(opts){
+    const btn = document.getElementById(opts.buttonId);
+    const outputBox = document.getElementById(opts.outputId);
+    const copyBtn = opts.copyId ? document.getElementById(opts.copyId) : null;
+
+    btn.addEventListener("click", async () => {
+      const label = btn.querySelector(".btn-label");
+      const originalLabel = label.textContent;
+      btn.disabled = true;
+      label.innerHTML = '<span class="spinner"></span> ' + opts.loadingLabel;
+      outputBox.className = "output-box";
+      outputBox.innerHTML = '<div class="output-empty"><span class="spinner dark"></span> Generating with AI...</div>';
+      if(copyBtn) copyBtn.style.display = "none";
+
+      try{
+        const { system, user } = opts.buildPrompt();
+        const text = await callClaude(system, user, opts.maxTokens || 1000);
+        opts.renderResult(text, outputBox);
+        outputBox.classList.add("filled");
+        if(copyBtn){
+          copyBtn.style.display = "inline-flex";
+          copyBtn.onclick = () => {
+            navigator.clipboard.writeText(outputBox.innerText).then(() => {
+              copyBtn.textContent = "Copied";
+              setTimeout(() => copyBtn.textContent = "Copy", 1400);
+            });
+          };
+        }
+      }catch(err){
+        outputBox.innerHTML = '<div class="output-empty">Something went wrong generating this output.</div><div class="error-box">' + escapeHtml(err.message || "Unknown error") + '</div>';
+      }finally{
+        btn.disabled = false;
+        label.textContent = originalLabel;
+      }
+    });
+  }
+
+  // ---------- Email Generator ----------
+  wireFeature({
+    buttonId: "em-generate",
+    outputId: "em-output",
+    copyId: "em-copy",
+    loadingLabel: "Generating...",
+    maxTokens: 700,
+    buildPrompt(){
+      const audience = document.getElementById("em-audience").value;
+      const context = document.getElementById("em-context").value.trim();
+      const tone = document.getElementById("em-tone").value;
+      const length = document.getElementById("em-length").value;
+      const points = document.getElementById("em-points").value.trim();
+
+      const system = "You are a professional workplace communication assistant. " +
+        "Write clear, well-structured business emails tailored precisely to the specified audience and tone. " +
+        "Always start with a line 'Subject: ...'. Keep language professional and appropriate for a corporate setting. " +
+        "Do not use placeholder brackets like [Name] unless no name was given. Do not add commentary before or after the email. " +
+        "Match the requested length: Short = under 80 words, Medium = 80-160 words, Detailed = 160-280 words.";
+
+      const user = "Write an email with the following requirements:\n" +
+        "Audience: " + audience + "\n" +
+        (context ? "Recipient / context: " + context + "\n" : "") +
+        "Tone: " + tone + "\n" +
+        "Length: " + length + "\n" +
+        "Purpose / key points to cover:\n" + (points || "General professional check-in.");
+
+      return { system, user };
+    },
+    renderResult(text, box){
+      box.innerHTML = '<div class="output-content">' + formatOutput(text) + '</div>';
+    }
+  });
+
+  // ---------- Meeting Notes Summarizer ----------
+  wireFeature({
+    buttonId: "nt-generate",
+    outputId: "nt-output",
+    copyId: "nt-copy",
+    loadingLabel: "Summarizing...",
+    maxTokens: 900,
+    buildPrompt(){
+      const notes = document.getElementById("nt-input").value.trim();
+      const system = "You are a meeting notes summarizer for a corporate workplace assistant. " +
+        "Given raw, possibly messy meeting notes or a transcript, produce a clean, structured summary using EXACTLY these four section headers, in this order: " +
+        "'### Key Discussion Points', '### Decisions Made', '### Action Items', '### Deadlines & Next Steps'. " +
+        "Under Action Items, note an owner name in parentheses if one is mentioned in the notes. " +
+        "Use concise bullet points under each header. If a section has no relevant content, write 'None noted' under it. Do not add any text outside these four sections.";
+      const user = "Here are the raw meeting notes:\n\n" + (notes || "(no notes provided)");
+      return { system, user };
+    },
+    renderResult(text, box){
+      box.innerHTML = '<div class="output-content">' + formatOutput(text) + '</div>';
+    }
+  });
+
+  // ---------- Research Assistant ----------
+  wireFeature({
+    buttonId: "rs-generate",
+    outputId: "rs-output",
+    copyId: "rs-copy",
+    loadingLabel: "Researching...",
+    maxTokens: 1000,
+    buildPrompt(){
+      const topic = document.getElementById("rs-topic").value.trim();
+      const depth = document.getElementById("rs-depth").value;
+      const system = "You are a workplace research assistant. Given a topic or question, produce a structured briefing using EXACTLY these headers: " +
+        "'### Overview', '### Key Insights', '### Considerations & Risks', '### Suggested Next Steps'. " +
+        "Use concise bullet points under Key Insights, Considerations & Risks, and Suggested Next Steps. Overview should be 2-4 sentences. " +
+        "Adjust depth to the requested level: 'Quick overview' should be brief (roughly 120 words total), 'Detailed analysis' can be longer and more thorough (roughly 300-400 words). " +
+        "Be balanced and factual, and note where information may be time-sensitive or worth independent verification.";
+      const user = "Research depth: " + depth + "\nTopic / question: " + (topic || "(no topic provided)");
+      return { system, user };
+    },
+    renderResult(text, box){
+      box.innerHTML = '<div class="output-content">' + formatOutput(text) + '</div>';
+    }
+  });
+
+  // ---------- Task Planner (structured JSON output) ----------
+  document.getElementById("pl-generate").addEventListener("click", async () => {
+    const btn = document.getElementById("pl-generate");
+    const label = btn.querySelector(".btn-label");
+    const outputBox = document.getElementById("pl-output");
+    const originalLabel = label.textContent;
+
+    const tasksRaw = document.getElementById("pl-tasks").value.trim();
+    const horizon = document.getElementById("pl-horizon").value;
+    const hours = document.getElementById("pl-hours").value;
+
+    btn.disabled = true;
+    label.innerHTML = '<span class="spinner"></span> Planning...';
+    outputBox.className = "output-box";
+    outputBox.innerHTML = '<div class="output-empty"><span class="spinner dark"></span> Building your schedule...</div>';
+
+    const system = "You are an AI task planning assistant for a workplace productivity tool. " +
+      "Given a raw list of tasks, a planning horizon, and working hours, return ONLY a valid JSON array (no markdown fences, no commentary, no explanation before or after) " +
+      "where each item has exactly these fields: " +
+      '"title" (string), "priority" ("High", "Medium", or "Low"), "estimated_time" (short string like "45 min"), ' +
+      '"suggested_slot" (short string like "9:30 - 10:15 AM" based on the given working hours and horizon), "notes" (short string, can be empty). ' +
+      "Order the array by suggested schedule order. Prioritize based on apparent urgency and importance from the task wording.";
+
+    const user = "Planning horizon: " + horizon + "\nWorking hours: " + hours + "\nTasks:\n" + (tasksRaw || "(no tasks provided)");
+
+    try{
+      const raw = await callClaude(system, user, 900);
+      const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+      let tasks;
+      try{
+        tasks = JSON.parse(cleaned);
+      }catch(parseErr){
+        outputBox.innerHTML = '<div class="output-content">' + formatOutput(raw) + '</div>';
+        outputBox.classList.add("filled");
+        return;
+      }
+      outputBox.innerHTML = renderPlanTable(tasks);
+      outputBox.classList.add("filled");
+    }catch(err){
+      outputBox.innerHTML = '<div class="output-empty">Something went wrong generating this plan.</div><div class="error-box">' + escapeHtml(err.message || "Unknown error") + '</div>';
+    }finally{
+      btn.disabled = false;
+      label.textContent = originalLabel;
+    }
+  });
+
+  function renderPlanTable(tasks){
+    if(!Array.isArray(tasks) || tasks.length === 0){
+      return '<div class="output-empty">No tasks were returned. Try adding more detail to your task list.</div>';
+    }
+    const badgeClass = p => {
+      const v = (p || "").toLowerCase();
+      if(v === "high") return "badge-high";
+      if(v === "low") return "badge-low";
+      return "badge-medium";
+    };
+    let rows = tasks.map(t => (
+      "<tr>" +
+        "<td>" + escapeHtml(t.title || "") + (t.notes ? '<div style="color:var(--text-faint); font-size:11.5px; margin-top:3px;">' + escapeHtml(t.notes) + "</div>" : "") + "</td>" +
+        '<td><span class="badge ' + badgeClass(t.priority) + '">' + escapeHtml(t.priority || "Medium") + "</span></td>" +
+        "<td>" + escapeHtml(t.estimated_time || "-") + "</td>" +
+        "<td>" + escapeHtml(t.suggested_slot || "-") + "</td>" +
+      "</tr>"
+    )).join("");
+    return '<table class="plan-table"><thead><tr><th>Task</th><th>Priority</th><th>Est. time</th><th>Suggested slot</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // ---------- Chat ----------
+  const chatHistory = [];
+  const chatMessages = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+  const chatSend = document.getElementById("chatSend");
+
+  function appendMessage(role, contentHtml){
+    const empty = chatMessages.querySelector(".chat-empty");
+    if(empty) empty.remove();
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "user" ? "user" : "bot");
+    div.innerHTML = contentHtml;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return div;
+  }
+
+  async function sendChat(){
+    const text = chatInput.value.trim();
+    if(!text) return;
+    chatInput.value = "";
+    appendMessage("user", escapeHtml(text));
+    chatHistory.push({ role: "user", content: text });
+
+    const loadingEl = appendMessage("bot", '<span class="spinner dark"></span> Thinking...');
+    chatSend.disabled = true;
+
+    const system = "You are a helpful, professional AI workplace productivity assistant embedded in a company tool. " +
+      "Help with drafting, planning, prioritization, quick research questions, and general work advice. " +
+      "Be concise and practical. Use short paragraphs or bullet points where useful. Avoid unnecessary preamble.";
+
+    try{
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 700,
+          system: system,
+          messages: chatHistory
+        })
+      });
+      if(!res.ok) throw new Error("The AI request failed (status " + res.status + ").");
+      const data = await res.json();
+      const reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+      chatHistory.push({ role: "assistant", content: reply });
+      loadingEl.innerHTML = '<div class="output-content">' + formatOutput(reply) + '</div>';
+    }catch(err){
+      loadingEl.innerHTML = '<div class="error-box">' + escapeHtml(err.message || "Something went wrong.") + '</div>';
+    }finally{
+      chatSend.disabled = false;
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  chatSend.addEventListener("click", sendChat);
+  chatInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      sendChat();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
